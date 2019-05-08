@@ -11,31 +11,32 @@
 
 using namespace std;
 
-/* VARIAVEIS */
+/* VARIÁVEIS */
 typedef unsigned char byte;	                //8bits
 typedef unsigned int palavra;               //32bits
 typedef unsigned long int microinstrucao;   //64bits
 
-microinstrucao armazenamento[512];	//ARMAZENAMENTO DE MICROINSTRUÇÕES
+/* ARMAZENAMENTO */
+microinstrucao armazenamento[512];	//ARMAZENAMENTO DE MICROINSTRUÇÕES (dado pelo professor)
 byte memoria[RAM]; 									//MEMORIA PRINCIPAL (RAM) DO EMULADOR
 
 palavra barramentoB, barramentoC; 	//BARRAMENTOS
-byte Z, N; 													//FLIP-FLOP PARA O DESLOCADOR (*)
+byte Z, N; 													//FLIP-FLOP PARA O DESLOCADOR
 
-// REGISTRADORES
+/* REGISTRADORES */
 palavra MAR = 0, MDR = 0, PC = 0;                           // MEMORIA
 byte MBR = 0;                                               // MEMORIA
 palavra SP = 0, LV = 0, CPP = 0, TOS = 0, OPC = 0, H = 0;   // ULA
 microinstrucao MIR;	                                        // Microinstrução atual
 
-//AUXILIARES 
+/* AUXILIARES */
 byte aux_barramentoB, aux_operacao, aux_pulo, aux_memoria, aux_deslocador; 
 palavra aux_gravar, MPC = 0; 
 
-
 /* MÉTODOS DE INICIALIZAÇÃO */
-void microprograma()  //Lê o arquivo microprog.rom e carrega o microprograma para o armazenamento
-{ 
+
+//Lê o arquivo microprog.rom e carrega o microprograma para o armazenamento
+void carregar_microprograma(){ 
     FILE *microprograma;
     microprograma = fopen("microprog.rom" , "rb");
 	if (microprograma != NULL) {
@@ -43,34 +44,33 @@ void microprograma()  //Lê o arquivo microprog.rom e carrega o microprograma pa
 		fclose(microprograma);  
     }
 }
+//Lê o arquivo passado como argumento e carrega o programa na memória
+void carregar_executavel(const char *arquivo){
+	FILE *prog;
+	palavra tamanho; //32bits
+	byte tam_arquivo[4];
 
-void carrega_programa(const char *arquivo) //Lê o arquivo passado como argumento e carrega o programa na memória
-{
-    FILE *prog;
-    palavra tamanho;
-    byte tam_arquivo[4];
-
-    prog = fopen (arquivo, "rb");
-    if (prog != NULL) {
-		//Carrega os primeiros 4 bytes que contém o tamanho do arquivo para um vetor e depois carrega esse vetor na variável tamanho.
-		fread(tam_arquivo, sizeof(byte), 4, prog);
-		memcpy(&tamanho, tam_arquivo, 4);
+	prog = fopen(arquivo, "rb");
+	if (prog != NULL) {
+	//Carrega os primeiros 4 bytes que contém o tamanho do arquivo para um vetor
+		fread(tam_arquivo, sizeof(byte), 4, prog); 
+		memcpy(&tamanho, tam_arquivo, 4);//carrega esse vetor na variável tamanho.
 
 		//Carrega os 20 primeiros bytes que contém a inicialização do programa para os primeiros 20 bytes da memória
 		fread(memoria, sizeof(byte), 20, prog);
 
-		//Carrega o programa na memória a partir da posição PC. Decimal: 1025
+		//Carrega o programa na memória a partir da posição PC+1. 
 		fread(&memoria[0x0401], sizeof(byte), tamanho-20, prog);
-	
-		fclose(prog);
-    }
+	}
+	fclose(prog);
 }
 
 /* MICROINSTRUÇÃO */
-void decodificar_microinstrucao() //Onde será feita a separação da microinstrução e os auxiliares
-{
-	aux_barramentoB  	=  MIR 		    ;										//Qual dos registradores será usado no barramento B
-	aux_memoria 			= (MIR >> 4) & 0b111;						//Qual operação será feita com a memoria principal
+
+//Onde será feita a separação da microinstrução e os auxiliares
+void decodificar_microinstrucao(){
+	aux_barramentoB  	=  MIR 		    & 0b1111;						//Qual dos registradores será usado no barramento B
+	aux_memoria 			= (MIR >> 4)  & 0b111;						//Qual operação será feita com a memoria principal
 	aux_gravar 				= (MIR >> 7)  & 0b111111111;			//Qual dos registradores será gravado o barramento C
 	aux_operacao 			= (MIR >> 16) & 0b111111;					//Qual a operacaoção que será feita na ULA
 	aux_deslocador 		= (MIR >> 22) & 0b11;							//Qual será a operação feita pelo deslocador
@@ -78,14 +78,14 @@ void decodificar_microinstrucao() //Onde será feita a separação da microinstr
 	MPC 							= (MIR >> 27) & 0b111111111;			//Qual será a próxima instrução		
 }
 
-void atribuir_barramentoB() //Faz a atribuição do barramento B
-{
+//Faz a atribuição do barramento B
+void atribuir_barramentoB(){
 	//Carrega um registrador para o barramento B
 	switch(aux_barramentoB){
 		case 0: barramentoB = MDR;				break;
 		case 1: barramentoB = PC;					break;
 		//O caso 2 carrega o MBR com sinal fazendo a extensão de sinal, ou seja, copia-se o bit mais significativo do MBR para as 24 posições mais significativas do barramento B.
-		case 2: barramentoB = MBR;
+		case 2: barramentoB = MBR; //*
 			if(MBR & (0b10000000)) 
 						barramentoB = barramentoB | (0b111111111111111111111111 << 8); 
 						break;
@@ -99,8 +99,7 @@ void atribuir_barramentoB() //Faz a atribuição do barramento B
 	}	
 }
 
-void ULA()
-{
+void ULA(){
 	switch(aux_operacao){
 	//Cada operação da ULA é representado pela sequência dos bits de operação. 
 	//Cada operação útil foi convertida para inteiro para facilitar a escrita do switch.
@@ -140,8 +139,8 @@ void ULA()
 	}
 }
 
-void atribuir_registradores() //Grava o resultado através do barramento C
-{
+//Grava o resultado através do barramento C
+void atribuir_registradores() {
 	//Pode atribuir vários registradores ao mesmo tempo dependendo se mi_gravar possui bit alto para o registrador correspondente
 	if(aux_gravar & 0b000000001)   MAR = barramentoC;
 	if(aux_gravar & 0b000000010)   MDR = barramentoC;
@@ -153,21 +152,19 @@ void atribuir_registradores() //Grava o resultado através do barramento C
 	if(aux_gravar & 0b010000000)   OPC = barramentoC;
 	if(aux_gravar & 0b100000000)   H   = barramentoC;
 }
-
-void operar_memoria() //Operações Fetch, Read, Write da memória
-{
-	if(aux_memoria & 0b001) MBR = memoria[PC];//FEATCH
+//Fetch, Read, Write 
+void operar_memoria(){
+	if(aux_memoria & 0b001) MBR = memoria[PC];								//FETCH
 
 	//MDR recebe os 4 bytes referente a palavra MAR 
-	if(aux_memoria & 0b010) memcpy(&MDR, &memoria[MAR*4], 4);//READ
+	if(aux_memoria & 0b010) memcpy(&MDR, &memoria[MAR*4], 4);	//READ
 	
 	//Os 4 bytes na memória da palavra MAR recebem o valor de MDR
 	if(aux_memoria & 0b100) memcpy(&memoria[MAR*4], &MDR, 4);	//WRITE
 
 }
-
-void pular() //Faz a operação do pulo
-{
+//Faz a operação do pulo
+void pular(){
 	//Realiza o pulo se a saída da ULA for zero (| = "ou" para bits) (& "e" para bits )
 	if(aux_pulo & 0b001) MPC = MPC | (Z << 8);
 
@@ -179,10 +176,12 @@ void pular() //Faz a operação do pulo
 }
 
 /* PRINTAR INFORMAÇÕES */
-void binario(void *valor, int tipo) //Mostra os valores em binário, formatados dependendo da necessidade
-{   
+
+//Mostra os valores em binário, formatados dependendo da necessidade
+void binario(void *valor, int tipo) {   
 	switch(tipo){
-		case 1: //mostrar o Enderereço da palavra
+
+		case 1: //mostra o Enderereço da palavra
 		{
 			printf(" ");
 			byte aux;
@@ -199,29 +198,7 @@ void binario(void *valor, int tipo) //Mostra os valores em binário, formatados 
 		}
 		break;
 
-		case 2: {
-			byte aux;
-			
-			aux = *((byte*)(valor));
-			for(int j = 0; j < 8; j++){
-				printf("%d", (aux >> 7) & 0b1);
-				aux = aux << 1;
-			}
-		}
-		break;
-		
-		case 3: {
-			palavra aux;
-			
-			aux = *((palavra*)(valor));
-			for(int j = 0; j < 32; j++){
-				printf("%d", (aux >> 31) & 0b1);
-				aux = aux << 1;
-			}
-		}
-		break;
-		
-		case 4: // printa os bits da microinstrução com espaço entre o addr, JAM, ULA e etc
+		case 2: // Printa os bits espaçando-os
 		{
 			microinstrucao aux;
 		
@@ -235,16 +212,17 @@ void binario(void *valor, int tipo) //Mostra os valores em binário, formatados 
 		}
 		break;
 
-		case 5: {
+		case 3: //printa os bits
+		{
 			palavra aux;
-		
-			aux = *((palavra*)(valor)) << 23;
-			for(int j = 0; j < 9; j++){
+			
+			aux = *((palavra*)(valor));
+			for(int j = 0; j < 32; j++){
 				printf("%d", (aux >> 31) & 0b1);
 				aux = aux << 1;
 			}
 		}
-		break;
+		break;	
 
 	}
 }
@@ -264,11 +242,9 @@ void atualizar(){
 		for (int i = SP; i >= LV; i--) {
 			palavra valor;
 			memcpy(&valor, &memoria[i*4], 4);
-
 			binario(&valor , 1); cout << "\t"<< i; cout << "\t  " << (int)valor; cout << "\n";
 		}
 		cout << "   ──────────────────────────────────────────────────";
-		//cout << " \n────────────────────────────────────────────────────────────";
 		cout << "\n";
 	}
 
@@ -279,7 +255,6 @@ void atualizar(){
 	cout << "\n    MAR :  ";		  	binario(&MAR , 3); cout << "      " << MAR;
 	cout << "\n    MDR :  ";   	 	  binario(&MDR , 3); cout << "      " << MDR;
 	cout << "\n    PC  :  "; 	 	  	binario(&PC  , 3); cout << "      " << PC;
-	//cout << "\n    MBR :\t\t\t   ";	binario(&MBR , 2); cout << "      " << (palavra)MBR;
 	cout << "\n    MBR :  ";				binario(&MBR , 3); cout << "      " << (palavra)MBR;
  	cout << "\n    SP  :  ";		  	binario(&SP  , 3); cout << "      " << SP;
 	cout << "\n    LV  :  ";		 		binario(&LV  , 3); cout << "      " << LV;
@@ -290,13 +265,13 @@ void atualizar(){
 	cout << "\n";
 	cout << "\n ENDEREÇO DA PRÓXIMA MICROINSTRUÇÃO";
 	cout << "\n────────────────────────────────────────────────────────────";
-	cout << "\n    MPC :\t\t\t  ";	  binario(&MPC , 5); cout << "      "<< MPC;
+	cout << "\n    MPC :  ";	  binario(&MPC , 3); cout << "      "<< MPC;
 
 	//Exibe a microinstrução que a ula está operando atualmente
 	cout << "\n\n MICROINSTRUÇÃO ATUAL";
 	cout << "\n────────────────────────────────────────────────────────────";
 	cout << "\n        Addr    JAM    ULA         C      Mem   B";
-	cout << "\n     "; binario(&MIR, 4);
+	cout << "\n     "; binario(&MIR, 2);
 
 	getchar();
 }

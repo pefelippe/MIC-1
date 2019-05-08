@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TAM 20
+#define TAM 20 //20 bytes de inicialização
 
-int swap_bytes(short int valor);
-int busca_indice(char *str, char **lista, int tamanho);
-int existe(char *str, char **lista, int tamanho);
-int retorna_offset(char *label, char **lista_labels, int *lista_offsets, int tamanho);
+int swap_bytes(short int valor);                        //trocar bytes 00 73
+int busca_indice(char *str, char **lista, int tamanho); //indice interno
+int existe(char *str, char **lista, int tamanho);       //verifica se existe a variavel
+int retorna_offset(char *label, char **lista_labels, int *lista_offsets, int tamanho); //returna o offset da instrução executada
 
 int main(int argc, char *argv[]){
-    if(argc  < 3){
-        printf("Erro: diga qual é o arquivo asm e o nome do arquivo executável \n");
+    if(argc  < 3 || argc > 3){
+        printf("Erro ao abrir ou escrever os arquivos. Tente novamente. \n");
         exit(1);
     }
 
@@ -24,20 +24,20 @@ int main(int argc, char *argv[]){
     int indice_offset = 0; // indice para a lista de offsets, "tamanho da lista"
     int offset = 0; // offset da instrução atual
 
-    int tamanho_cod_ini = 20;	// tamanho do código + 20 bytes de inicialização
+    int tamanho_cod_ini = 20;	// 20 bytes de inicialização
 
-    short int init = 0x73;
-    init = swap_bytes(init);
-    short int padding = 0;
-    int cpp = 0x0006;
-    int lv = 0x1001;
-    int pc = 0x400;
+    short int init = 0x73; //2 bytes
+    init = swap_bytes(init); //inverte o 0x73
+    short int padding = 0; //2 bytes
+    int cpp = 0x0006;   //Contador de constantes, começa com 6
+    int lv = 0x1001;    //endereço da primeira localização do quadro de variáveis locais, começa 4097
+    int pc = 0x400;     //Contador do Programa, começa em 1024
 
-    memset(buffer, 0x0, TAM);   // Zera o que tem em buffer para retirar possíveis lixos
+    memset(buffer, 0x0, TAM);   // Zera o que tem em buffer para retirar (possíveis) lixos
 
     /* ABRINDO O ASM E GERANDO O .EXE */
-    FILE *source = fopen(argv[1], "r");
-    FILE *executavel = fopen(argv[2], "w");
+    FILE *source = fopen(argv[1], "r");     //lê o asm
+    FILE *executavel = fopen(argv[2], "w"); //cria o .exe
 
     if(source == NULL){
         printf("Erro: arquivo %s não encontrado.\n", argv[1]);
@@ -50,14 +50,16 @@ int main(int argc, char *argv[]){
     }
 
     /* Mapeando variáveis */
-    while(fscanf(source, "%s", buffer) && !feof(source)){
-        if(!strcmp(buffer, "istore") || !strcmp(buffer, "iload") || !strcmp(buffer, "iinc")){
+    while(fscanf(source, "%s", buffer) && !feof(source)){ //lê as strings e coloca no buffer até feof
+        if(!strcmp(buffer, "istore") || !strcmp(buffer, "iload") || !strcmp(buffer, "iinc")){ //nesses é obrigatorio vir uma variavel dps
+            //Se ao ler o arquivo, encontrar uma desses comandos, vai pegar a variavel seguinte
             fscanf(source, "%s", buffer);   // Pega variável
-            if(!existe(buffer, lista_vars, indice)){
+            if(!existe(buffer, lista_vars, indice)){ //verificar e a variavel ja existe
+            //pedir pro matheus explicar pq ngm aqui entende esse caralho mt dificil
                 *(lista_vars + indice) = (char *) malloc(sizeof(char) * strlen(buffer)); // Aloca espaço do tamanho do nome da string
                 strcpy(*(lista_vars + indice), buffer);
                 indice++;  // Vai para o próxima variável
-                lista_vars = realloc(lista_vars, sizeof(char *) * (indice + 1));
+                lista_vars = realloc(lista_vars, sizeof(char *) * (indice + 1)); //realloca para guardar a nova variavel
             }
         }
     }
@@ -65,7 +67,7 @@ int main(int argc, char *argv[]){
    rewind(source); // Volta para o início do arquivo
 
     /* Mapeamento de labels */
-    while(fscanf(source, "%s", buffer) && !feof(source)){
+    while(fscanf(source, "%s", buffer) && !feof(source)){ //ler o source até o fim e salvar as variaveis no buffer
         if(!strcmp(buffer, "nop") || \
         !strcmp(buffer, "iadd") || \
         !strcmp(buffer, "isub") || \
@@ -122,8 +124,8 @@ int main(int argc, char *argv[]){
     fwrite(&cpp, sizeof(int), 1, executavel);
     fwrite(&lv, sizeof(int), 1, executavel);
     fwrite(&pc, sizeof(int), 1, executavel);
-    lv += indice;	// Soma LV ao número de variáveis
-    fwrite(&lv, sizeof(int), 1, executavel);
+    lv += indice;	// Soma LV ao número de variáveis e vira SP
+    fwrite(&lv, sizeof(int), 1, executavel); //SP
     
     offset = 0; // Recontagem de offsets
 

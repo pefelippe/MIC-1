@@ -5,8 +5,8 @@ using namespace std;
 
 int main (int argc, const char *argv[]){
     setlocale(LC_ALL, "Portuguese");
-    microprograma();
-    carrega_programa(argv[1]);
+    carregar_microprograma();
+    carregar_executavel(argv[1]);
 
     while(true){
       atualizar();
