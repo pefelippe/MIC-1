@@ -55,7 +55,6 @@ int main(int argc, char *argv[]){
             //Se ao ler o arquivo, encontrar uma desses comandos, vai pegar a variavel seguinte
             fscanf(source, "%s", buffer);   // Pega variável
             if(!existe(buffer, lista_vars, indice)){ //verificar e a variavel ja existe
-            //pedir pro matheus explicar pq ngm aqui entende esse caralho mt dificil
                 *(lista_vars + indice) = (char *) malloc(sizeof(char) * strlen(buffer)); // Aloca espaço do tamanho do nome da string
                 strcpy(*(lista_vars + indice), buffer);
                 indice++;  // Vai para o próxima variável
@@ -167,7 +166,7 @@ int main(int argc, char *argv[]){
             codigo_hex = 0x19;
             fwrite(&codigo_hex, sizeof(char), 1, executavel);
             fscanf(source, "%s", buffer);
-            char valor = atoi(buffer); // Modificar?
+            char valor = atoi(buffer);
             fwrite(&valor, sizeof(char), 1, executavel);
             offset += 2;
         } else if(!strcmp(buffer, "iload")){

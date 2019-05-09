@@ -29,7 +29,7 @@ int main (int argc, const char *argv[]){
 REGISTRADORES:
   MAR (registrador de endereço de memória de 32bits) - Endereço da proxima instrução executada
   MDR (registrador de dados de memória de 32 bits) - VALOR DO MAR
-  PC  - Contém o endereço da instrução a ser buscada em seguida.
+  MPC  - Contém o endereço da instrução a ser buscada em seguida.
   MBR (Registrador de Buffer de Memória de 8bits, apontado por PC) - 
   Onde são armazenados em seqüência todos os bytes das instruções a serem executadas;
   SP  - Contém o endereço da palavra do topo da pilha
