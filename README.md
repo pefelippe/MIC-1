@@ -1,7 +1,9 @@
-# MIC-1
+# Processador MIC-1
 
-*Assembler*: Lê o arquivo.asm e "compila", transformando, assim, em um arquivo binario(.exe).
+>Simulador do processador MIC-1. Feito em C++.
 
-*Emulador*: Lê o arquivo binário, e executa.  
+**Assembler**: Lê o arquivo.asm e "compila", transformando, assim, em um arquivo binario(.exe).
 
-*Processador*: Assembler + Emulador num arquivo só.
+**Emulador**: Lê o arquivo binário, e executa.  
+
+**Processador**: Assembler + Emulador num arquivo só.
