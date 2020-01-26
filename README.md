@@ -7,3 +7,6 @@
 **Emulador**: Lê o arquivo binário, e executa.  
 
 **Processador**: Assembler + Emulador num arquivo só.
+
+
+MIC-1: https://en.wikipedia.org/wiki/MIC-1
