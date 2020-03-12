@@ -1,12 +1,12 @@
-# Processador MIC-1
+# MIC-1
 
->Simulador do processador MIC-1. Feito em C++.
+[O quê é a microarquitetura MIC-1](http://www.dpi.inpe.br/~carlos/Academicos/Cursos/ArqComp/aula_7.html)
 
-**Assembler**: Lê o arquivo.asm e "compila", transformando, assim, em um arquivo binario(.exe).
+![processador](https://github.com/pefelippe/MIC-1/blob/master/processador.png)
 
-**Emulador**: Lê o arquivo binário, e executa.  
+Neste projeto, você encontrará:
 
-**Processador**: Assembler + Emulador num arquivo só.
+**Assembler**: Lê o arquivo .asm, que contém instruções assembly para o processador, e as transforma em código binário (.exe).
 
+**Emulador**: Recebe o arquivo .exe como paramêtro e simula o processador recebendo as intruções contidas no arquivo.  
 
-MIC-1: https://en.wikipedia.org/wiki/MIC-1
